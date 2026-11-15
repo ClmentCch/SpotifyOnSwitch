@@ -65,7 +65,11 @@ jobs:
 
       - name: Remove the containers
         if: always()
-        run: docker rm -f spotify-engine-run spotify-nx || true
+        run: |
+          docker rm -f spotify-engine-run spotify-nx || true
+          # The containers write dist/ as root; the steps after this one are
+          # the runner's user.
+          sudo chown -R "$(id -u):$(id -g)" dist || true
 
       - name: Verify the NRO, the engine image and the manifest
         run: bash scripts/verify.sh
