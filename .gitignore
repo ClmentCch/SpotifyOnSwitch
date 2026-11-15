@@ -1,0 +1,28 @@
+# Build output
+.work/
+dist/
+dist-*/
+
+# The engine's own build output (vendor/chromium-nx/gx/build-nx.sh)
+vendor/chromium-nx/gx/dist-nx/
+vendor/chromium-nx/gx/dist-hbl/
+vendor/chromium-nx/gx/dist-release/
+
+# The older libnx build system of the vendor tree, if it is used by hand
+vendor/chromium-nx/nro/build/
+vendor/chromium-nx/nro/*.elf
+vendor/chromium-nx/nro/*.nro
+vendor/chromium-nx/nro/*.nacp
+vendor/chromium-nx/nro/*.map
+vendor/chromium-nx/nro/include/
+vendor/chromium-nx/nro/source/iomem.c
+vendor/chromium-nx/nro/source/iomem.h
+vendor/chromium-nx/nro/source/jmp_buf.c
+vendor/chromium-nx/nro/source/jmp_buf.h
+vendor/chromium-nx/nro/source/utils.c
+
+# Development helpers of this repository
+.dev/
+
+*.o
+*.log
