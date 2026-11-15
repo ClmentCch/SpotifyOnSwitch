@@ -31,28 +31,23 @@ def sha256(path):
             h.update(block)
     return h.hexdigest()
 
-if data[:4] != b"NRO0":
-    sys.exit("Spotify.nro: not an NRO (magic %r)" % data[:4])
+# An NRO as libnx's elf2nro writes it: a branch, the "HOMEBREW" marker, then
+# the "NRO0" magic at 0x10. The NACP (the metadata HBMenu reads: name, author,
+# icon) is the last 0x4000 bytes, its name first.
+if data[8:16] != b"HOMEBREW" or data[16:20] != b"NRO0":
+    sys.exit("Spotify.nro: not an NRO (header %r)" % (data[:32],))
 size = len(data)
 if size < 15 << 20:
     sys.exit("Spotify.nro: %d bytes, too small to hold the kernel and the browser" % size)
 
-# The NACP (the app's metadata, which HBMenu reads) follows the NRO; its name
-# is 0x200 bytes from 8 bytes past the "NACP" magic.
-found = []
-start = 0
-while True:
-    i = data.find(b"NACP", start)
-    if i < 0 or i + 8 + 0x200 > size:
-        break
-    raw = data[i + 8:i + 8 + 0x200].split(b"\0")[0]
-    try:
-        found.append(raw.decode("utf-8"))
-    except UnicodeDecodeError:
-        pass
-    start = i + 4
-if "Spotify" not in found:
-    sys.exit("Spotify.nro: the NACP does not name the app Spotify (found %r)" % (found[:4],))
+nacp = data[-0x4000:]
+name = nacp[:0x200].split(b"\0")[0].decode("utf-8", "replace")
+if name != "Spotify":
+    sys.exit("Spotify.nro: the NACP names the app %r, not Spotify" % name)
+if b"ClmentCch" not in nacp[:0x2400]:
+    sys.exit("Spotify.nro: the NACP has no author")
+if b"\xff\xd8\xff" not in data:
+    sys.exit("Spotify.nro: no JPEG icon is embedded")
 if b"open.spotify.com/intl-fr/" not in data:
     sys.exit("Spotify.nro: the Spotify web player's address is not in the program")
 if b"@spotify-engine.ext4 =profile.ext4" not in data:
