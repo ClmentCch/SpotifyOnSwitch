@@ -35,7 +35,8 @@ CFLAGS      += $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 LDFLAGS     := -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) \
                -Wl,-Map,$(BUILD)/$(TARGET).map -Wl,--gc-sections
 LIBPATHS    := -L$(PORTLIBS)/lib -L$(LIBNX)/lib
-LIBS        := -Wl,--start-group $(PORTLIBS_ARCHIVES) -lnx -lm -Wl,--end-group
+# Mesa's EGL/glapi archives are C++; the C driver still needs the C++ runtime.
+LIBS        := -Wl,--start-group $(PORTLIBS_ARCHIVES) -lnx -lstdc++ -lm -Wl,--end-group
 
 CFILES      := $(wildcard $(SOURCES)/*.c) $(wildcard vendor/cjson/*.c) $(wildcard vendor/stb/*.c)
 OFILES      := $(patsubst %.c,$(BUILD)/%.o,$(CFILES)) $(BUILD)/font.o $(BUILD)/latin.o
