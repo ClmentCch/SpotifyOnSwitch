@@ -28,13 +28,10 @@ jobs:
         run: |
           docker run --rm -v "$PWD":/work -w /work "$DEVKITPRO_IMAGE" bash -lc '
             set -euo pipefail
-            for attempt in 1 2 3; do
-              dkp-pacman -Syu --noconfirm --needed && break
-              echo "pacman sync failed, retrying"; sleep 20
-            done
-            dkp-pacman -S --noconfirm --needed switch-sdl2 switch-sdl2_image switch-sdl2_ttf
-            echo "== pkg-config =="
-            pkg-config --cflags --libs --static sdl2 SDL2_image SDL2_ttf || true
+            echo "== SDL2 packages =="
+            dkp-pacman -Q switch-sdl2 switch-sdl2_image switch-sdl2_ttf
+            echo "== portlibs =="
+            ls "$DEVKITPRO/portlibs/switch/lib" | head -40
             make -j"$(nproc)"
           '
           sudo chown -R "$(id -u):$(id -g)" .

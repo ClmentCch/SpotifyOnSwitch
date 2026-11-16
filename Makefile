@@ -30,20 +30,22 @@ LIBDIRS     := $(PORTLIBS) $(LIBNX)
 # SDL2 and its codec/font dependencies come from the devkitPro portlibs; let
 # pkg-config resolve the transitive static link flags instead of guessing names.
 OBJCOPY     ?= $(PREFIX)objcopy
-
-# devkitPro ships .pc files for the portlibs; make sure pkg-config finds them
-export PKG_CONFIG_PATH := $(PORTLIBS)/lib/pkgconfig:$(PORTLIBS)/share/pkgconfig:$(PKG_CONFIG_PATH)
 PKG_CONFIG  ?= pkg-config
-SDL_PKGS    := sdl2 SDL2_image SDL2_ttf
-SDL_CFLAGS  := $(shell $(PKG_CONFIG) --cflags $(SDL_PKGS) 2>/dev/null)
-SDL_LIBS    := $(shell $(PKG_CONFIG) --libs --static $(SDL_PKGS) 2>/dev/null)
 
-ifeq ($(strip $(SDL_LIBS)),)
-$(warning pkg-config could not resolve SDL2; check dkp-pacman installs)
-endif
+# Link every archive devkitPro installed for the Switch portlibs. The static
+# linker only pulls the objects it needs, and --start-group makes the order of
+# SDL2/freetype/png/jpeg/webp/mesa irrelevant. pkg-config is not used because
+# the devkitPro image does not export PC paths for cross builds.
+PORTLIBS_ARCHIVES := $(wildcard $(PORTLIBS)/lib/*.a)
 
-CFLAGS      += $(SDL_CFLAGS)
-LIBS        := -Wl,--start-group $(SDL_LIBS) -lnx -lm -Wl,--end-group
+CFLAGS      := -g -Wall -Wextra -Wno-unused-parameter -O2 -ffunction-sections -fdata-sections \
+               $(ARCH) -D__SWITCH__ -DMUSICTT_VERSION=\"$(APP_VERSION)\"
+CFLAGS      += $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) -I$(PORTLIBS)/include -I$(PORTLIBS)/include/SDL2 -I$(LIBNX)/include
+
+LDFLAGS     := -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(BUILD)/$(TARGET).map -Wl,--gc-sections
+LIBDIRS     := $(PORTLIBS) $(LIBNX)
+LIBPATHS    := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+LIBS        := -Wl,--start-group $(PORTLIBS_ARCHIVES) -lnx -lm -Wl,--end-group
 
 CFILES      := $(wildcard $(SOURCES)/*.c) $(wildcard vendor/cjson/*.c) $(wildcard vendor/stb/*.c)
 OFILES      := $(patsubst %.c,$(BUILD)/%.o,$(CFILES)) $(BUILD)/font.o $(BUILD)/latin.o
@@ -71,8 +73,6 @@ $(BUILD)/latin.o: assets/NotoSans-Regular.ttf
 	@cd $(CURDIR) && $(OBJCOPY) -I binary -O elf64-littleaarch64 -B aarch64 \
 		--rename-section .data=.rodata,alloc,load,readonly,data,contents \
 		assets/NotoSans-Regular.ttf $@
-
-LIBPATHS    := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
 $(TARGET).elf: $(OFILES)
 	@echo linking $(notdir $@)
