@@ -19,32 +19,22 @@ APP_VERSION := 1.0.0
 APP_ICON    := $(CURDIR)/assets/icon.jpg
 
 ARCH        := -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIC
-
-CFLAGS      := -g -Wall -Wextra -Wno-unused-parameter -O2 -ffunction-sections -fdata-sections \
-               $(ARCH) -D__SWITCH__ -DMUSICTT_VERSION=\"$(APP_VERSION)\"
-CFLAGS      += $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) -I$(PORTLIBS)/include -I$(PORTLIBS)/include/SDL2 -I$(LIBNX)/include
-
-LDFLAGS     := -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(BUILD)/$(TARGET).map -Wl,--gc-sections
-LIBDIRS     := $(PORTLIBS) $(LIBNX)
-
-# SDL2 and its codec/font dependencies come from the devkitPro portlibs; let
-# pkg-config resolve the transitive static link flags instead of guessing names.
 OBJCOPY     ?= $(PREFIX)objcopy
-PKG_CONFIG  ?= pkg-config
 
 # Link every archive devkitPro installed for the Switch portlibs. The static
-# linker only pulls the objects it needs, and --start-group makes the order of
-# SDL2/freetype/png/jpeg/webp/mesa irrelevant. pkg-config is not used because
-# the devkitPro image does not export PC paths for cross builds.
+# linker only pulls the objects it needs, and --start-group makes the ordering
+# of SDL2/freetype/png/jpeg/webp/mesa irrelevant. pkg-config is not used: the
+# pinned devkitPro image does not export .pc paths for cross builds.
 PORTLIBS_ARCHIVES := $(wildcard $(PORTLIBS)/lib/*.a)
 
 CFLAGS      := -g -Wall -Wextra -Wno-unused-parameter -O2 -ffunction-sections -fdata-sections \
-               $(ARCH) -D__SWITCH__ -DMUSICTT_VERSION=\"$(APP_VERSION)\"
-CFLAGS      += $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) -I$(PORTLIBS)/include -I$(PORTLIBS)/include/SDL2 -I$(LIBNX)/include
+               $(ARCH) -D__SWITCH__ -DMUSICTT_VERSION='"$(APP_VERSION)"'
+CFLAGS      += $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+               -I$(PORTLIBS)/include -I$(PORTLIBS)/include/SDL2 -I$(LIBNX)/include
 
-LDFLAGS     := -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(BUILD)/$(TARGET).map -Wl,--gc-sections
-LIBDIRS     := $(PORTLIBS) $(LIBNX)
-LIBPATHS    := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+LDFLAGS     := -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) \
+               -Wl,-Map,$(BUILD)/$(TARGET).map -Wl,--gc-sections
+LIBPATHS    := -L$(PORTLIBS)/lib -L$(LIBNX)/lib
 LIBS        := -Wl,--start-group $(PORTLIBS_ARCHIVES) -lnx -lm -Wl,--end-group
 
 CFILES      := $(wildcard $(SOURCES)/*.c) $(wildcard vendor/cjson/*.c) $(wildcard vendor/stb/*.c)
