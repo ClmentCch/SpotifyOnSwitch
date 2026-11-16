@@ -96,11 +96,9 @@ void pages_draw_header(void) {
             }
             break;
         case PAGE_LIBRARY: title = i18n_get(S_LIBRARY); sub = i18n_num(S_TRACKS_COUNT, g_app.lib.total_tracks); break;
-        case PAGE_SETTINGS: title = i18n_get(S_SETTINGS); sub = i18n_get(S_ABOUT_BODY); break;
+        case PAGE_SETTINGS: title = i18n_get(S_SETTINGS); sub = "Musictt " MUSICTT_VERSION; break;
         default: break;
     }
-    /* Only the first line of the settings subtitle makes sense here. */
-    if (g_app.page == PAGE_SETTINGS) sub = "Musictt " MUSICTT_VERSION;
     ui_text(F_H1, CX, 20, C_TEXT, title);
     ui_text(F_SMALL, CX, 56, C_MUTED, sub);
 
@@ -136,6 +134,11 @@ void pages_draw_home(int x, int y, int w, int h) {
     int card_y = sy + 32;
     int card_w = 296, card_h = 140, gap = 16;
     int shown = imin(3, g_app.lib.count);
+    if (shown == 0) {
+        ui_round(x, card_y, w, 140, 20, C_CARD);
+        ui_text(F_LABEL, x + 24, card_y + 22, C_TEXT, i18n_get(S_LIBRARY_EMPTY_TITLE));
+        ui_text_wrap(F_SMALL, x + 24, card_y + 58, w - 48, 22, C_MUTED, i18n_get(S_LIBRARY_EMPTY_BODY));
+    }
     for (int i = 0; i < shown; i++) {
         int bx = x + i * (card_w + gap);
         Playlist *pl = &g_app.lib.items[i];

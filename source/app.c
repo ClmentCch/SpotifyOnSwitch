@@ -176,6 +176,8 @@ static void set_focus(int index) {
     g_app.focus_t = 0;
 }
 
+static void ensure_focus_visible(void);
+
 static void move_focus(int dx, int dy) {
     if (g_app.hit_count <= 0) return;
     if (!g_app.focus_visible) { set_focus(0); return; }
@@ -204,7 +206,10 @@ static void move_focus(int dx, int dy) {
         if (score < 0) continue;
         if (best < 0 || score < best_score) { best = i; best_score = score; }
     }
-    if (best >= 0) set_focus(best);
+    if (best >= 0) {
+        set_focus(best);
+        ensure_focus_visible();
+    }
 }
 
 static void ensure_focus_visible(void) {
