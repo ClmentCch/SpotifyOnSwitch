@@ -1,0 +1,9 @@
+build/
+Musictt.elf
+Musictt.nro
+Musictt.nacp
+Musictt.lst
+Musictt.map
+*.o
+*.d
+.DS_Store

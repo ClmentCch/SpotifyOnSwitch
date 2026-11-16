@@ -1,0 +1,67 @@
+name: Build Musictt
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # Pinned so a build months from now uses the same toolchain.
+  DEVKITPRO_IMAGE: devkitpro/devkita64@sha256:1fc388c3a0d34bd2045a6dadcb1020e069d5f876a187fd705de14b4440c00282
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Host tests (library, settings, translations, colour)
+        run: bash scripts/host_test.sh
+
+      - name: Build Musictt.nro
+        run: |
+          docker run --rm -v "$PWD":/work -w /work "$DEVKITPRO_IMAGE" bash -lc '
+            set -euo pipefail
+            for attempt in 1 2 3; do
+              dkp-pacman -Syu --noconfirm --needed && break
+              echo "pacman sync failed, retrying"; sleep 20
+            done
+            dkp-pacman -S --noconfirm --needed switch-sdl2 switch-sdl2_image switch-sdl2_ttf
+            echo "== pkg-config =="
+            pkg-config --cflags --libs --static sdl2 SDL2_image SDL2_ttf || true
+            make -j"$(nproc)"
+          '
+          sudo chown -R "$(id -u):$(id -g)" .
+
+      - name: Verify the NRO
+        if: always()
+        run: bash scripts/verify.sh
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Musictt
+          path: |
+            Musictt.nro
+            Musictt.lst
+          if-no-files-found: warn
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "A release already exists for $GITHUB_REF_NAME; refusing to replace it."
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" Musictt.nro \
+            --title "Musictt $GITHUB_REF_NAME" \
+            --notes-file .github/release-notes.md
